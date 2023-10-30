@@ -13,7 +13,21 @@ spec:
         app: user
     spec:
       containers:
-      - name: front
-        image: 103stars/user-image
+      - name: user
+        image: juan2040751/usuarios
         ports:
-        - containerPort: 80
+        - containerPort: 8000
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: userservice
+spec:
+  type: ClusterIP
+  selector:
+    app: userservice
+  ports:
+  - name: ds3p
+    port: 8001
+    targetPort: 8000
