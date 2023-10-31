@@ -1,0 +1,127 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: default
+  labels:
+    istio-injection: enabled
+
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: users
+  labels:
+    name: users
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: users
+  template:
+    metadata:
+      labels:
+        name: users
+    spec:
+      containers:
+      - name: users
+        image: juan2040751/usuarios
+        ports:
+        - containerPort: 8000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: users
+  annotations:
+        prometheus.io/scrape: 'true'
+  labels:
+    name: users
+  namespace: default
+spec:
+  ports:
+  - port: 8000
+    targetPort: 8000
+  selector:
+    name: users
+
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auth
+  labels:
+    name: auth
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: auth
+  template:
+    metadata:
+      labels:
+        name: auth
+    spec:
+      containers:
+      - name: auth
+        image: juan2040751/autenticacion
+        ports:
+        - containerPort: 8000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: auth
+  annotations:
+        prometheus.io/scrape: 'true'
+  labels:
+    name: auth
+  namespace: default
+spec:
+  ports:
+  - port: 8000
+    targetPort: 8000
+  selector:
+    name: auth
+
+
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: front-deployment
+  namespace: default
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: front
+  template:
+    metadata:
+      labels:
+        app: front
+    spec:
+      containers:
+      - name: mlmodel
+        image: juan2040751/front_usuarios
+        ports:
+        - containerPort: 3000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: front-service
+  namespace: default
+spec:
+  selector:
+    app: front
+  ports:
+    - protocol: TCP
+      port: 3000
+      targetPort: 3000
+      nodePort: 30000
+  type: NodePort
