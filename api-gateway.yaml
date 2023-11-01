@@ -1,0 +1,143 @@
+#### users ####
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: users
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: users
+  template:
+    metadata:
+      labels:
+        app: users
+    spec:
+      containers:
+      - name: users
+        image: juan2040751/usuarios
+        ports:
+        - containerPort: 8000
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: users
+  annotations:
+        prometheus.io/scrape: 'true'
+  namespace: default
+spec:
+  selector:
+    app: users
+  ports:
+  - protocol: TCP
+    port: 8000
+    targetPort: 8000
+
+
+#### auth ####
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auth
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: auth
+  template:
+    metadata:
+      labels:
+        app: auth
+    spec:
+      containers:
+      - name: auth
+        image: juan2040751/autenticacion
+        imagePullPolicy: IfNotPresent        
+        ports:
+        - containerPort: 8000
+
+
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: auth-svc
+spec:
+  selector:
+    app: auth
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 8000
+
+#### front ####
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: front
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: front
+  template:
+    metadata:
+      labels:
+        app: front
+    spec:
+      containers:
+      - name: front
+        image: juan2040751/front_usuarios
+        imagePullPolicy: IfNotPresent        
+        ports:
+        - containerPort: 3000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: front-svc
+  namespace: default
+spec:
+  selector:
+    app: front
+  ports:
+    - protocol: TCP
+      port: 3000
+      targetPort: 3000
+      nodePort: 30000
+  type: NodePort
+
+#### API GATEWAY ####
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ingress
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: users.api.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: users
+            port:
+              number: 8000
+  - host: auth.api
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: auth-svc
+            port:
+              number: 80
