@@ -1,0 +1,21 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: qa-ingress
+  labels:
+    name: qa-ingress
+  namespace: question-answer
+  annotations:
+    # add below line of nginx is meshed
+    nginx.ingress.kubernetes.io/service-upstream: "true"
+    # nginx.ingress.kubernetes.io/affinity: "cookie"
+    # nginx.ingress.kubernetes.io/affinity-mode: "persistent"
+spec:
+  ingressClassName: nginx
+  rules: 
+  - host: qa.127.0.0.2.nip.io
+  defaultBackend:
+    service:
+      name: front-svc
+      port:
+        number: 3000

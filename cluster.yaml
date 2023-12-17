@@ -1,0 +1,201 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: question-answer
+  annotations:
+    linkerd.io/inject: enabled
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: auth
+  namespace: question-answer
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: users
+  namespace: question-answer
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: front
+  namespace: question-answer
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: auth-svc
+  namespace: question-answer
+spec:
+  ports:
+  - name: grpc
+    port: 8000
+    targetPort: 8000
+  selector:
+    app: auth-svc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: users-svc
+  namespace: question-answer
+spec:
+  ports:
+  - name: grpc
+    port: 8000
+    targetPort: 8000
+  selector:
+    app: users-svc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: front-svc
+  namespace: question-answer
+spec:
+  ports:
+  - name: http
+    port: 3000
+    targetPort: 3000
+  selector:
+    app: front-svc
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/name: auth-svc
+    app.kubernetes.io/part-of: question-answer
+    app.kubernetes.io/version: v11
+    app: auth-svc
+  name: auth-svc
+  namespace: question-answer
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: auth-svc
+      version: v11
+  template:
+    metadata:
+      labels:
+        app: auth-svc
+        version: v11
+    spec:
+      containers:
+      - env:
+        - name: GRPC_PORT
+          value: "8000"
+        image: juan2040751/autenticacion
+        name: auth-svc
+        ports:
+        - containerPort: 8000
+          name: grpc
+        resources:
+          requests:
+            cpu: 100m
+      serviceAccountName: auth
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/name: users-svc
+    app.kubernetes.io/part-of: question-answer
+    app.kubernetes.io/version: v11
+    app: users-svc
+  name: users-svc
+  namespace: question-answer
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: users-svc
+      version: v11
+  template:
+    metadata:
+      labels:
+        app: users-svc
+        version: v11
+    spec:
+      containers:
+      - env:
+        - name: GRPC_PORT
+          value: "8000"
+        image: juan2040751/usuarios
+        name: users-svc
+        ports:
+        - containerPort: 8000
+          name: grpc
+        resources:
+          requests:
+            cpu: 100m
+      serviceAccountName: users
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/name: front-svc
+    app.kubernetes.io/part-of: question-answer
+    app.kubernetes.io/version: v11
+  name: front-svc
+  namespace: question-answer
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: front-svc
+      version: v11
+  template:
+    metadata:
+      labels:
+        app: front-svc
+        version: v11
+    spec:
+      containers:
+      - env:
+        - name: front_PORT
+          value: "3000"
+        - name: AUTHSVC_HOST
+          value: auth-svc.question-answer:8000
+        - name: USERSSVC_HOST
+          value: users-svc.question-answer:8000
+        image: juan2040751/front_usuarios
+        name: front-svc
+        ports:
+        - containerPort: 3000
+          name: http
+        resources:
+          requests:
+            cpu: 100m
+      serviceAccountName: front
+
+---
+apiVersion: linkerd.io/v1alpha2
+kind: ServiceProfile
+metadata:
+  name: users-svc
+  namespace: question-answer
+spec:
+  routes:
+    - condition:
+        pathRegex: "^/users/.*"
+        method: POST|PUT|DELETE|UPDATE
+      name: users-svc
+
+---
+apiVersion: linkerd.io/v1alpha2
+kind: ServiceProfile
+metadata:
+  name: auth-svc
+  namespace: question-answer
+spec:
+  routes:
+    - condition:
+        pathRegex: "^/auth/.*"
+        method: POST|PUT|DELETE|UPDATE
+      name: auth-svc
