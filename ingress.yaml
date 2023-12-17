@@ -8,12 +8,34 @@ metadata:
   annotations:
     # add below line of nginx is meshed
     nginx.ingress.kubernetes.io/service-upstream: "true"
-    # nginx.ingress.kubernetes.io/affinity: "cookie"
-    # nginx.ingress.kubernetes.io/affinity-mode: "persistent"
+    nginx.ingress.kubernetes.io/rewrite-target: "/$2"
 spec:
   ingressClassName: nginx
   rules: 
   - host: qa.127.0.0.2.nip.io
+    http:
+      paths:
+      - path: /api/users(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: users-svc
+            port:
+              number: 8000
+      - path: /api/auth(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: auth-svc
+            port:
+              number: 8000
+      - path: /()(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: front-svc
+            port:
+              number: 3000
   defaultBackend:
     service:
       name: front-svc
